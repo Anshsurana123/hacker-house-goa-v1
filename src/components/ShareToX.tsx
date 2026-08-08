@@ -22,6 +22,7 @@ export default function ShareToX({
   currentlyShipping,
 }: ShareToXProps) {
   const [isSharing, setIsSharing] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   const handleDownload = () => {
     if (!canvas) return;
@@ -43,12 +44,17 @@ export default function ShareToX({
           ? 'Just got my HH Goa 2026 profile frame! 🌴 See you in Goa! #FrameInGoa #HHGoa2026'
           : `I'm ${name ? name.toUpperCase() : 'a builder'}, geared up for HH Goa 2026! 🏖️🚀 #FrameInGoa #HHGoa2026`;
 
-      await shareToX(canvas, caption, {
+      const result = await shareToX(canvas, caption, {
         name,
         builderTitle,
         stackRole,
         currentlyShipping,
       });
+
+      if (result.copiedToClipboard) {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 5000);
+      }
     } catch (err) {
       console.error('Share error:', err);
     } finally {
@@ -59,7 +65,20 @@ export default function ShareToX({
   const isDisabled = !canvas;
 
   return (
-    <div className="flex flex-col gap-3 font-['Space_Mono'] w-full">
+    <div className="flex flex-col gap-3 font-['Space_Mono'] w-full relative">
+      {/* Toast Notification when image is copied to clipboard */}
+      {showToast && (
+        <div className="bg-[#E8237E] text-white p-3 rounded-xl shadow-xl text-xs font-bold border border-white/20 animate-fade-in flex items-center justify-between gap-2">
+          <span>📋 Graphic copied to Clipboard! Press <b>Ctrl+V</b> (or Cmd+V) to paste your photo directly into X!</span>
+          <button
+            onClick={() => setShowToast(false)}
+            className="text-white/80 hover:text-white text-sm font-mono"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-3 w-full">
         {/* Download Button */}
         <button
@@ -104,7 +123,7 @@ export default function ShareToX({
       </div>
 
       <p className="text-[10px] text-[#F3E9D2]/40 text-center">
-        💡 Mobile: Shares PNG directly to X app. Desktop: Opens X composer with card preview link.
+        💡 Clicking "Share to 𝕏" copies your graphic to clipboard (Ctrl+V to attach on X) and opens the tweet composer.
       </p>
     </div>
   );

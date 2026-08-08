@@ -9,6 +9,7 @@ export interface ShareDetails {
 
 /**
  * Share the generated graphic to X (Twitter).
+ * - Copies the exact PNG graphic to system Clipboard for 1-click Ctrl+V pasting into Twitter composer.
  * - Mobile Path: native Web Share API Level 2 with attached PNG file directly.
  * - Desktop Path: background-uploads PNG, generates /card/[id] link with OG card preview, and opens Twitter Intent composer.
  */
@@ -16,11 +17,25 @@ export async function shareToX(
   canvas: HTMLCanvasElement,
   caption: string,
   details?: ShareDetails
-): Promise<void> {
+): Promise<{ copiedToClipboard: boolean }> {
   const blob = await getCanvasBlob(canvas);
   const fullText = caption.includes('#FrameInGoa')
     ? caption
     : `${caption} #FrameInGoa`;
+
+  let copiedToClipboard = false;
+
+  // 1. Copy image to system Clipboard for instant Ctrl+V (Cmd+V) pasting into Twitter!
+  if (typeof navigator !== 'undefined' && navigator.clipboard && typeof ClipboardItem !== 'undefined') {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      copiedToClipboard = true;
+    } catch (e) {
+      console.warn('Clipboard image write warning:', e);
+    }
+  }
 
   // Detect mobile device vs desktop browser
   const isMobile =
@@ -29,7 +44,7 @@ export async function shareToX(
       navigator.userAgent
     );
 
-  // 1. MOBILE PATH: Native Web Share API with attached PNG file directly
+  // 2. MOBILE PATH: Native Web Share API with attached PNG file directly
   if (isMobile && typeof navigator !== 'undefined' && navigator.canShare) {
     const file = new File([blob], 'hh-goa-2026.png', { type: 'image/png' });
     const shareData = { text: fullText, files: [file] };
@@ -37,22 +52,20 @@ export async function shareToX(
     if (navigator.canShare(shareData)) {
       try {
         await navigator.share(shareData);
-        return;
+        return { copiedToClipboard };
       } catch (err: unknown) {
         const error = err as Error;
-        if (error.name === 'AbortError') return; // User cancelled
-        console.warn('Mobile Web Share fallback:', error);
+        if (error.name === 'AbortError') return { copiedToClipboard }; // User cancelled
       }
     }
   }
 
-  // 2. DESKTOP PATH: Background upload -> retrieve /card/[id] link -> open Twitter Intent
+  // 3. DESKTOP PATH: Background upload -> retrieve /card/[id] link -> open Twitter Intent
   try {
     const uploadResult = await uploadForShare(blob);
     if (uploadResult && uploadResult.shareUrl) {
       let finalShareUrl = uploadResult.shareUrl;
 
-      // Append builder details for dynamic @vercel/og Edge fallback rendering
       if (details) {
         const urlObj = new URL(finalShareUrl);
         if (details.name) urlObj.searchParams.set('name', details.name);
@@ -64,7 +77,7 @@ export async function shareToX(
 
       const intentUrl = buildTwitterIntentUrl(fullText, finalShareUrl);
       window.open(intentUrl, '_blank', 'noopener,noreferrer');
-      return;
+      return { copiedToClipboard };
     }
   } catch (err) {
     console.warn('Upload for share failed, falling back to direct intent:', err);
@@ -73,6 +86,7 @@ export async function shareToX(
   // Fallback: Open Twitter Intent with pre-filled text
   const intentUrl = buildTwitterIntentUrl(fullText);
   window.open(intentUrl, '_blank', 'noopener,noreferrer');
+  return { copiedToClipboard };
 }
 
 /**
