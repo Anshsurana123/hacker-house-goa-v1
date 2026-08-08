@@ -27,56 +27,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     let imageUrl = '';
 
-    // Strategy 1: Catbox.moe (High-speed keyless public image CDN)
-    if (!imageUrl) {
-      try {
-        const blob = new Blob([buffer], { type: 'image/png' });
-        const formData = new FormData();
-        formData.append('reqtype', 'fileupload');
-        formData.append('fileToUpload', blob, `hh-goa-${id}.png`);
-
-        const catboxRes = await fetch('https://catbox.moe/user/api.php', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (catboxRes.ok) {
-          const resText = (await catboxRes.text()).trim();
-          if (resText.startsWith('http://') || resText.startsWith('https://')) {
-            imageUrl = resText;
-          }
-        }
-      } catch (e) {
-        console.warn('Catbox upload error:', e);
-      }
-    }
-
-    // Strategy 2: Tmpfiles.org keyless CDN fallback
-    if (!imageUrl) {
-      try {
-        const blob = new Blob([buffer], { type: 'image/png' });
-        const formData = new FormData();
-        formData.append('file', blob, `hh-goa-${id}.png`);
-
-        const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (tmpRes.ok) {
-          const tmpData = await tmpRes.json();
-          if (tmpData?.data?.url) {
-            // Convert page URL to direct download image URL
-            imageUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-          }
-        }
-      } catch (e) {
-        console.warn('Tmpfiles upload error:', e);
-      }
-    }
-
-    // Strategy 3: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN exists)
-    if (!imageUrl && process.env.BLOB_READ_WRITE_TOKEN) {
+    // Strategy 1: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN exists on Vercel environment)
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const blob = await put(`hh-goa-${id}.png`, buffer, {
           access: 'public',
@@ -88,7 +40,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // Strategy 4: Custom ImgBB (if IMGBB_API_KEY exists)
+    // Strategy 2: Custom ImgBB (if IMGBB_API_KEY exists)
     if (!imageUrl && process.env.IMGBB_API_KEY) {
       try {
         const formData = new FormData();
@@ -111,7 +63,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // Strategy 5: Dynamic Edge OG Route Fallback with encoded params
+    // Strategy 3: Built-in Vercel Edge OG Route (Zero external dependencies, zero hotlink blocks, 100% reliable)
     if (!imageUrl) {
       const ogParams = new URLSearchParams();
       if (name) ogParams.set('name', name);
