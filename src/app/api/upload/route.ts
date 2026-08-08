@@ -54,8 +54,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         if (imgbbRes.ok) {
           const imgbbData = await imgbbRes.json();
-          if (imgbbData?.data?.url) {
-            imageUrl = imgbbData.data.url;
+          if (imgbbData?.data?.url || imgbbData?.data?.display_url) {
+            imageUrl = imgbbData.data.url || imgbbData.data.display_url;
           }
         }
       } catch (e) {
