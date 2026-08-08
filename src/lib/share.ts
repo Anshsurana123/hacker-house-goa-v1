@@ -1,4 +1,4 @@
-import { getCanvasBlob } from './canvasUtils';
+import { getCanvasBlob, createTwitterOgCanvas } from './canvasUtils';
 
 export interface ShareDetails {
   name?: string;
@@ -11,7 +11,7 @@ export interface ShareDetails {
  * Share the generated graphic to X (Twitter).
  * - Copies the exact PNG graphic to system Clipboard for 1-click Ctrl+V pasting into Twitter composer.
  * - Mobile Path: native Web Share API Level 2 with attached PNG file directly.
- * - Desktop Path: background-uploads PNG, generates /card/[id] link with OG card preview, and opens Twitter Intent composer.
+ * - Desktop Path: background-uploads Twitter-optimized 1200x630 landscape PNG, generates /card/[id] link with OG card preview, and opens Twitter Intent composer.
  */
 export async function shareToX(
   canvas: HTMLCanvasElement,
@@ -60,9 +60,12 @@ export async function shareToX(
     }
   }
 
-  // 3. DESKTOP PATH: Background upload -> retrieve /card/[id] link -> open Twitter Intent
+  // 3. DESKTOP PATH: Background upload 1200x630 landscape graphic -> retrieve /card/[id] link -> open Twitter Intent
   try {
-    const uploadResult = await uploadForShare(blob, details);
+    const ogCanvas = createTwitterOgCanvas(canvas);
+    const ogBlob = await getCanvasBlob(ogCanvas);
+
+    const uploadResult = await uploadForShare(ogBlob, details);
     if (uploadResult && uploadResult.shareUrl) {
       let finalShareUrl = uploadResult.shareUrl;
 

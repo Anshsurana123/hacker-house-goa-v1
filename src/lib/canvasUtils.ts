@@ -445,3 +445,104 @@ export function downloadCanvas(
     })
     .catch((err) => console.error('Download failed:', err));
 }
+export function createTwitterOgCanvas(sourceCanvas: HTMLCanvasElement): HTMLCanvasElement {
+  const ogCanvas = document.createElement('canvas');
+  ogCanvas.width = 1200;
+  ogCanvas.height = 630;
+  const ctx = ogCanvas.getContext('2d');
+  if (!ctx) return sourceCanvas;
+
+  const width = 1200;
+  const height = 630;
+
+  // 1. Tropical Forest Background
+  ctx.fillStyle = COLORS.forest;
+  ctx.fillRect(0, 0, width, height);
+
+  // 2. Ambient Sunset Glow in center
+  drawGoaSunset(ctx, width / 2, height / 2, 210);
+
+  // 3. Sunburst Rays
+  drawSunburstRays(ctx, width / 2, height / 2, width * 0.8, 'rgba(243, 233, 210, 0.04)', 32);
+
+  // 4. Code Watermark
+  drawCodeWatermark(ctx, width, height, 0.04);
+
+  // 5. Palm Trees on Left & Right Wings
+  drawAsciiPalmTree(ctx, 80, height - 30, 480, 'H', 'rgba(243, 233, 210, 0.28)', 13);
+  drawAsciiPalmTree(ctx, width - 80, height - 30, 480, 'G', 'rgba(243, 233, 210, 0.28)', 13);
+
+  // 6. Left Side Typography Accent
+  ctx.save();
+  ctx.fillStyle = COLORS.mustard;
+  ctx.font = 'bold 15px "Alfa Slab One", serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('HH GOA 2026', 180, 110);
+
+  ctx.fillStyle = COLORS.creamAlpha(0.7);
+  ctx.font = '11px "Space Mono", monospace';
+  ctx.fillText('BUILDER PASS', 180, 134);
+  ctx.fillText('OCT 28–31 · GOA', 180, 154);
+  ctx.restore();
+
+  // 7. Right Side Typography Accent
+  ctx.save();
+  ctx.fillStyle = COLORS.pink;
+  ctx.font = 'bold 15px "Space Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('#FrameInGoa', width - 180, 110);
+
+  ctx.fillStyle = COLORS.creamAlpha(0.7);
+  ctx.font = '11px "Space Mono", monospace';
+  ctx.fillText('GOA RESIDENCY', width - 180, 134);
+  ctx.fillText('BEACH & CODE', width - 180, 154);
+  ctx.restore();
+
+  // 8. Render Centered Source Card with Drop Shadow & Gold Frame
+  const cardH = 570;
+  const cardAspect = sourceCanvas.width / sourceCanvas.height;
+  const cardW = cardH * cardAspect;
+  const cardX = (width - cardW) / 2;
+  const cardY = (height - cardH) / 2;
+
+  // Outer drop shadow for 3D card depth
+  ctx.save();
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+  ctx.shadowBlur = 35;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = COLORS.forestDark;
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 16);
+  ctx.fill();
+  ctx.restore();
+
+  // Draw scaled source canvas inside clip path
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 16);
+  ctx.clip();
+  ctx.drawImage(sourceCanvas, cardX, cardY, cardW, cardH);
+  ctx.restore();
+
+  // Gold & Cream outer border around the card
+  ctx.save();
+  ctx.strokeStyle = COLORS.mustard;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, 16);
+  ctx.stroke();
+
+  ctx.strokeStyle = COLORS.creamAlpha(0.4);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(cardX - 4, cardY - 4, cardW + 8, cardH + 8, 20);
+  ctx.stroke();
+  ctx.restore();
+
+  // Outer border of 1200x630 Twitter banner
+  drawVintageBorder(ctx, width, height, 14, 2);
+
+  return ogCanvas;
+}
