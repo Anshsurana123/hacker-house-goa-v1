@@ -62,7 +62,7 @@ export async function shareToX(
 
   // 3. DESKTOP PATH: Background upload -> retrieve /card/[id] link -> open Twitter Intent
   try {
-    const uploadResult = await uploadForShare(blob);
+    const uploadResult = await uploadForShare(blob, details);
     if (uploadResult && uploadResult.shareUrl) {
       let finalShareUrl = uploadResult.shareUrl;
 
@@ -93,10 +93,18 @@ export async function shareToX(
  * Upload the generated PNG for sharing with OG meta tags.
  */
 export async function uploadForShare(
-  blob: Blob
+  blob: Blob,
+  details?: ShareDetails
 ): Promise<{ id: string; url: string; shareUrl: string } | null> {
   try {
-    const res = await fetch(`/api/upload?filename=hh-goa-${Date.now()}.png`, {
+    const queryParams = new URLSearchParams();
+    queryParams.set('filename', `hh-goa-${Date.now()}.png`);
+    if (details?.name) queryParams.set('name', details.name);
+    if (details?.builderTitle) queryParams.set('title', details.builderTitle);
+    if (details?.stackRole) queryParams.set('role', details.stackRole);
+    if (details?.currentlyShipping) queryParams.set('shipping', details.currentlyShipping);
+
+    const res = await fetch(`/api/upload?${queryParams.toString()}`, {
       method: 'POST',
       body: blob,
       headers: {

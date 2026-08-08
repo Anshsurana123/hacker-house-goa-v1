@@ -22,7 +22,7 @@ export async function GET(request: Request) {
             justifyContent: 'center',
             backgroundColor: '#173C2E',
             backgroundImage:
-              'radial-gradient(circle at center, rgba(232, 35, 126, 0.35) 0%, rgba(23, 60, 46, 1) 75%)',
+              'linear-gradient(135deg, #1D4B39 0%, #173C2E 50%, #0F2A1F 100%)',
             padding: '40px',
             fontFamily: 'sans-serif',
           }}
@@ -35,7 +35,6 @@ export async function GET(request: Request) {
               fontWeight: 900,
               letterSpacing: '3px',
               marginBottom: '6px',
-              textShadow: '0 0 25px rgba(227, 167, 48, 0.5)',
             }}
           >
             HH GOA 2026
@@ -78,7 +77,6 @@ export async function GET(request: Request) {
                 textTransform: 'uppercase',
                 textAlign: 'center',
                 letterSpacing: '1px',
-                textShadow: '0 0 20px rgba(227, 167, 48, 0.4)',
               }}
             >
               {name}
@@ -89,7 +87,7 @@ export async function GET(request: Request) {
               style={{
                 backgroundColor: 'rgba(30, 77, 58, 0.95)',
                 color: '#F3E9D2',
-                border: '1.5px solid #E3A730',
+                border: '2px solid #E3A730',
                 borderRadius: '8px',
                 padding: '8px 24px',
                 fontSize: role.length > 25 ? '16px' : '19px',
@@ -110,7 +108,6 @@ export async function GET(request: Request) {
                 fontWeight: 'bold',
                 marginBottom: shipping ? '16px' : '0px',
                 textAlign: 'center',
-                textShadow: '0 0 15px rgba(232, 35, 126, 0.4)',
               }}
             >
               ⚡ {title} ⚡
@@ -124,7 +121,7 @@ export async function GET(request: Request) {
                   flexDirection: 'column',
                   alignItems: 'center',
                   backgroundColor: 'rgba(232, 35, 126, 0.12)',
-                  border: '1.5px dashed rgba(243, 233, 210, 0.35)',
+                  border: '2px solid rgba(243, 233, 210, 0.35)',
                   borderRadius: '12px',
                   padding: '10px 28px',
                   width: '100%',

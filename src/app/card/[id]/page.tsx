@@ -15,7 +15,7 @@ interface PageProps {
 export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
-  const { img, name, shipping } = await searchParams;
+  const { img, name, title, role, shipping } = await searchParams;
 
   const host =
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
@@ -24,8 +24,18 @@ export async function generateMetadata({
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host.replace(/^https?:\/\//, '')}`;
 
-  // Use persistent public CDN image URL if provided, otherwise edge OG route
-  const imageUrl = img ? decodeURIComponent(img) : `${baseUrl}/api/og`;
+  let imageUrl = img ? decodeURIComponent(img) : '';
+  if (!imageUrl) {
+    const ogParams = new URLSearchParams();
+    if (name) ogParams.set('name', name);
+    if (title) ogParams.set('title', title);
+    if (role) ogParams.set('role', role);
+    if (shipping) ogParams.set('shipping', shipping);
+    const queryStr = ogParams.toString();
+    imageUrl = `${baseUrl}/api/og${queryStr ? `?${queryStr}` : ''}`;
+  } else if (imageUrl.startsWith('/')) {
+    imageUrl = `${baseUrl}${imageUrl}`;
+  }
 
   const shareTitle = name ? `${name.toUpperCase()} @ HH Goa 2026` : 'HH Goa 2026 — Builder Pass';
   const description = shipping
@@ -59,9 +69,18 @@ export async function generateMetadata({
 }
 
 export default async function SharePage({ searchParams }: PageProps) {
-  const { img } = await searchParams;
+  const { img, name, title, role, shipping } = await searchParams;
 
-  const displayImg = img ? decodeURIComponent(img) : '/api/og';
+  let displayImg = img ? decodeURIComponent(img) : '';
+  if (!displayImg) {
+    const ogParams = new URLSearchParams();
+    if (name) ogParams.set('name', name);
+    if (title) ogParams.set('title', title);
+    if (role) ogParams.set('role', role);
+    if (shipping) ogParams.set('shipping', shipping);
+    const queryStr = ogParams.toString();
+    displayImg = `/api/og${queryStr ? `?${queryStr}` : ''}`;
+  }
 
   return (
     <main
@@ -89,7 +108,7 @@ export default async function SharePage({ searchParams }: PageProps) {
 
         {/* Display the exact stored graphic */}
         <div
-          className="rounded-2xl overflow-hidden shadow-2xl mb-8 mx-auto border-2"
+          className="rounded-2xl overflow-hidden shadow-2xl mb-8 mx-auto border-2 bg-black/20"
           style={{
             borderColor: 'rgba(243, 233, 210, 0.3)',
             maxWidth: 580,
@@ -97,15 +116,15 @@ export default async function SharePage({ searchParams }: PageProps) {
         >
           <img
             src={displayImg}
-            alt="HH Goa 2026 Graphic"
-            className="w-full h-auto block"
+            alt={name ? `${name}'s HH Goa 2026 Graphic` : 'HH Goa 2026 Graphic'}
+            className="w-full h-auto block min-h-[250px] object-cover"
           />
         </div>
 
         {/* CTA button */}
         <a
           href="/"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-lg font-bold transition-all hover:scale-105"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-lg font-bold transition-all hover:scale-105 shadow-lg"
           style={{
             fontFamily: "'Alfa Slab One', serif",
             backgroundColor: '#E3A730',

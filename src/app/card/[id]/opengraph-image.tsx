@@ -5,13 +5,7 @@ export const alt = 'HH Goa 2026 Graphic';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
-export default async function Image({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-
+export default async function Image() {
   return new ImageResponse(
     (
       <div
@@ -24,7 +18,7 @@ export default async function Image({
           justifyContent: 'center',
           backgroundColor: '#173C2E',
           backgroundImage:
-            'radial-gradient(circle at center, rgba(232, 35, 126, 0.3) 0%, rgba(23, 60, 46, 1) 75%)',
+            'linear-gradient(135deg, #1D4B39 0%, #173C2E 50%, #0F2A1F 100%)',
           padding: '40px',
           fontFamily: 'sans-serif',
         }}
@@ -81,7 +75,7 @@ export default async function Image({
             style={{
               backgroundColor: 'rgba(30, 77, 58, 0.9)',
               color: '#F3E9D2',
-              border: '1.5px solid #E3A730',
+              border: '2px solid #E3A730',
               borderRadius: '8px',
               padding: '8px 24px',
               fontSize: '20px',

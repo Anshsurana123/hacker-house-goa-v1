@@ -4,6 +4,12 @@ import { put } from '@vercel/blob';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name') || '';
+    const title = searchParams.get('title') || '';
+    const role = searchParams.get('role') || '';
+    const shipping = searchParams.get('shipping') || '';
+
     const host =
       request.headers.get('x-forwarded-host') ||
       request.headers.get('host') ||
@@ -21,8 +27,56 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     let imageUrl = '';
 
-    // Option 1: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN exists)
-    if (process.env.BLOB_READ_WRITE_TOKEN) {
+    // Strategy 1: Catbox.moe (High-speed keyless public image CDN)
+    if (!imageUrl) {
+      try {
+        const blob = new Blob([buffer], { type: 'image/png' });
+        const formData = new FormData();
+        formData.append('reqtype', 'fileupload');
+        formData.append('fileToUpload', blob, `hh-goa-${id}.png`);
+
+        const catboxRes = await fetch('https://catbox.moe/user/api.php', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (catboxRes.ok) {
+          const resText = (await catboxRes.text()).trim();
+          if (resText.startsWith('http://') || resText.startsWith('https://')) {
+            imageUrl = resText;
+          }
+        }
+      } catch (e) {
+        console.warn('Catbox upload error:', e);
+      }
+    }
+
+    // Strategy 2: Tmpfiles.org keyless CDN fallback
+    if (!imageUrl) {
+      try {
+        const blob = new Blob([buffer], { type: 'image/png' });
+        const formData = new FormData();
+        formData.append('file', blob, `hh-goa-${id}.png`);
+
+        const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (tmpRes.ok) {
+          const tmpData = await tmpRes.json();
+          if (tmpData?.data?.url) {
+            // Convert page URL to direct download image URL
+            imageUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+          }
+        }
+      } catch (e) {
+        console.warn('Tmpfiles upload error:', e);
+      }
+    }
+
+    // Strategy 3: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN exists)
+    if (!imageUrl && process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const blob = await put(`hh-goa-${id}.png`, buffer, {
           access: 'public',
@@ -34,11 +88,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // Option 2: ImgBB Permanent Public CDN Storage (Direct PNG URL)
-    if (!imageUrl) {
+    // Strategy 4: Custom ImgBB (if IMGBB_API_KEY exists)
+    if (!imageUrl && process.env.IMGBB_API_KEY) {
       try {
         const formData = new FormData();
-        formData.append('key', '6d704447cd4646f32ee71f7438b47836');
+        formData.append('key', process.env.IMGBB_API_KEY);
         formData.append('image', base64Image);
 
         const imgbbRes = await fetch('https://api.imgbb.com/1/upload', {
@@ -57,37 +111,27 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // Option 3: Freeimage.host CDN Fallback
+    // Strategy 5: Dynamic Edge OG Route Fallback with encoded params
     if (!imageUrl) {
-      try {
-        const formData = new FormData();
-        formData.append('key', '6d704447cd4646f32ee71f7438b47836');
-        formData.append('action', 'upload');
-        formData.append('source', base64Image);
-        formData.append('format', 'json');
+      const ogParams = new URLSearchParams();
+      if (name) ogParams.set('name', name);
+      if (title) ogParams.set('title', title);
+      if (role) ogParams.set('role', role);
+      if (shipping) ogParams.set('shipping', shipping);
 
-        const freeRes = await fetch('https://freeimage.host/api/1/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (freeRes.ok) {
-          const freeData = await freeRes.json();
-          if (freeData?.image?.url) {
-            imageUrl = freeData.image.url;
-          }
-        }
-      } catch (e) {
-        console.warn('Freeimage upload error:', e);
-      }
+      const queryString = ogParams.toString();
+      imageUrl = `${origin}/api/og${queryString ? `?${queryString}` : ''}`;
     }
 
-    // Option 4: Edge OG Route Fallback
-    if (!imageUrl) {
-      imageUrl = `${origin}/api/og`;
-    }
+    // Construct final shareable URL with parameters
+    const cardParams = new URLSearchParams();
+    cardParams.set('img', imageUrl);
+    if (name) cardParams.set('name', name);
+    if (title) cardParams.set('title', title);
+    if (role) cardParams.set('role', role);
+    if (shipping) cardParams.set('shipping', shipping);
 
-    const shareUrl = `${origin}/card/${id}?img=${encodeURIComponent(imageUrl)}`;
+    const shareUrl = `${origin}/card/${id}?${cardParams.toString()}`;
 
     return NextResponse.json({
       id,
