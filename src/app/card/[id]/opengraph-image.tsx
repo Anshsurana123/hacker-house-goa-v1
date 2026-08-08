@@ -74,7 +74,7 @@ export default async function Image({
               textTransform: 'uppercase',
             }}
           >
-            HACKER HOUSE GOA BUILDER
+            BUILDER PASS
           </div>
 
           <div
@@ -89,13 +89,13 @@ export default async function Image({
               marginBottom: '16px',
             }}
           >
-            ⚙ BUILDER RESIDENCY PASS
+            ⚙ HACKER HOUSE GOA 2026
           </div>
 
           <div
             style={{
               color: '#E8237E',
-              fontSize: '22px',
+              fontSize: '24px',
               fontStyle: 'italic',
               fontWeight: 'bold',
             }}

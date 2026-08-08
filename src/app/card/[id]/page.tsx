@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ img?: string }>;
+  searchParams: Promise<{ name?: string; title?: string; role?: string; shipping?: string }>;
 }
 
 export async function generateMetadata({
@@ -10,53 +10,43 @@ export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const { img } = await searchParams;
+  const { name } = await searchParams;
 
-  const host =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
-    process.env.VERCEL_URL ||
-    'hacker-house-goa-v1.vercel.app';
-  const protocol = host.includes('localhost') ? 'http' : 'https';
-  const baseUrl = `${protocol}://${host.replace(/^https?:\/\//, '')}`;
-
-  // Absolute public HTTPS URL for Twitter crawler
-  const imageUrl = img ? decodeURIComponent(img) : `${baseUrl}/api/og/${id}`;
-
-  const title = 'HH Goa 2026 — Graphic';
+  const shareTitle = name ? `${name} @ HH Goa 2026` : 'HH Goa 2026 — Graphic';
   const description =
     'Check out my Hacker House Goa 2026 graphic! Create yours at HH Goa 2026 #FrameInGoa';
 
+  const ogImageUrl = `/card/${id}/opengraph-image`;
+
   return {
-    title,
+    title: shareTitle,
     description,
     openGraph: {
-      title,
+      title: shareTitle,
       description,
       type: 'website',
       siteName: 'HH Goa 2026',
       images: [
         {
-          url: imageUrl,
+          url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: 'HH Goa 2026 Graphic',
+          alt: shareTitle,
         },
       ],
     },
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: shareTitle,
       description,
-      images: [imageUrl],
+      images: [ogImageUrl],
     },
   };
 }
 
-export default async function SharePage({ params, searchParams }: PageProps) {
+export default async function SharePage({ params }: PageProps) {
   const { id } = await params;
-  const { img } = await searchParams;
-
-  const displayImg = img ? decodeURIComponent(img) : `/api/og/${id}`;
+  const displayImg = `/card/${id}/opengraph-image`;
 
   return (
     <main
@@ -82,7 +72,7 @@ export default async function SharePage({ params, searchParams }: PageProps) {
           28–31 OCTOBER · GOA, INDIA
         </p>
 
-        {/* Display the generated graphic */}
+        {/* Display the graphic rendered directly by Next.js Edge opengraph-image */}
         <div
           className="rounded-2xl overflow-hidden shadow-2xl mb-8 mx-auto border-2"
           style={{
