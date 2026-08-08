@@ -2,21 +2,40 @@ import type { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ name?: string; title?: string; role?: string; shipping?: string }>;
+  searchParams: Promise<{
+    name?: string;
+    title?: string;
+    role?: string;
+    shipping?: string;
+    age?: string;
+  }>;
 }
 
 export async function generateMetadata({
-  params,
   searchParams,
 }: PageProps): Promise<Metadata> {
-  const { id } = await params;
-  const { name } = await searchParams;
+  const { name, title, role, shipping, age } = await searchParams;
 
-  const shareTitle = name ? `${name} @ HH Goa 2026` : 'HH Goa 2026 — Graphic';
-  const description =
-    'Check out my Hacker House Goa 2026 graphic! Create yours at HH Goa 2026 #FrameInGoa';
+  const host =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    'hacker-house-goa-v1.vercel.app';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host.replace(/^https?:\/\//, '')}`;
 
-  const ogImageUrl = `/card/${id}/opengraph-image`;
+  const qParams = new URLSearchParams();
+  if (name) qParams.set('name', name);
+  if (title) qParams.set('title', title);
+  if (role) qParams.set('role', role);
+  if (shipping) qParams.set('shipping', shipping);
+  if (age) qParams.set('age', age);
+
+  const ogImageUrl = `${baseUrl}/api/og?${qParams.toString()}`;
+
+  const shareTitle = name ? `${name.toUpperCase()} @ HH Goa 2026` : 'HH Goa 2026 — Builder Pass';
+  const description = shipping
+    ? `${name || 'Builder'} is currently shipping "${shipping}" at Hacker House Goa 2026! 🚀 #FrameInGoa`
+    : 'Check out my Hacker House Goa 2026 builder pass! Create yours #FrameInGoa';
 
   return {
     title: shareTitle,
@@ -44,9 +63,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function SharePage({ params }: PageProps) {
-  const { id } = await params;
-  const displayImg = `/card/${id}/opengraph-image`;
+export default async function SharePage({ searchParams }: PageProps) {
+  const { name, title, role, shipping, age } = await searchParams;
+
+  const qParams = new URLSearchParams();
+  if (name) qParams.set('name', name);
+  if (title) qParams.set('title', title);
+  if (role) qParams.set('role', role);
+  if (shipping) qParams.set('shipping', shipping);
+  if (age) qParams.set('age', age);
+
+  const displayImg = `/api/og?${qParams.toString()}`;
 
   return (
     <main
@@ -56,7 +83,7 @@ export default async function SharePage({ params }: PageProps) {
         fontFamily: "'Space Mono', monospace",
       }}
     >
-      <div className="max-w-md w-full text-center">
+      <div className="max-w-xl w-full text-center">
         {/* Header */}
         <h1
           className="text-4xl tracking-wider mb-2"
@@ -72,12 +99,12 @@ export default async function SharePage({ params }: PageProps) {
           28–31 OCTOBER · GOA, INDIA
         </p>
 
-        {/* Display the graphic rendered directly by Next.js Edge opengraph-image */}
+        {/* Display the exact customized graphic rendered by @vercel/og Edge */}
         <div
           className="rounded-2xl overflow-hidden shadow-2xl mb-8 mx-auto border-2"
           style={{
             borderColor: 'rgba(243, 233, 210, 0.3)',
-            maxWidth: 400,
+            maxWidth: 580,
           }}
         >
           <img
