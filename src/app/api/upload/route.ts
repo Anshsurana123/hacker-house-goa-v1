@@ -1,7 +1,6 @@
-import { saveImage } from '@/lib/imageStore';
-import { put } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { nanoid } from 'nanoid';
+import { put } from '@vercel/blob';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
@@ -17,11 +16,12 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const arrayBuffer = await request.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const base64Image = buffer.toString('base64');
     const id = nanoid(10);
 
     let imageUrl = '';
 
-    // 1. Try Vercel Blob if token environment variable is configured
+    // Option 1: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN exists)
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const blob = await put(`hh-goa-${id}.png`, buffer, {
@@ -34,39 +34,59 @@ export async function POST(request: Request): Promise<NextResponse> {
       }
     }
 
-    // 2. Try Catbox.moe free public CDN for permanent inline PNG image hosting
+    // Option 2: ImgBB Permanent Public CDN Storage (Direct PNG URL)
     if (!imageUrl) {
       try {
         const formData = new FormData();
-        const blobFile = new Blob([buffer], { type: 'image/png' });
-        formData.append('reqtype', 'fileupload');
-        formData.append('fileToUpload', blobFile, `hh-goa-${id}.png`);
+        formData.append('key', '6d704447cd4646f32ee71f7438b47836');
+        formData.append('image', base64Image);
 
-        const catRes = await fetch('https://catbox.moe/user/api.php', {
+        const imgbbRes = await fetch('https://api.imgbb.com/1/upload', {
           method: 'POST',
           body: formData,
         });
 
-        if (catRes.ok) {
-          const catUrl = (await catRes.text()).trim();
-          if (catUrl.startsWith('http')) {
-            imageUrl = catUrl;
+        if (imgbbRes.ok) {
+          const imgbbData = await imgbbRes.json();
+          if (imgbbData?.data?.url) {
+            imageUrl = imgbbData.data.url;
           }
         }
       } catch (e) {
-        console.warn('Catbox upload fallback:', e);
+        console.warn('ImgBB upload error:', e);
       }
     }
 
-    // 3. Fallback to local image store route
+    // Option 3: Freeimage.host CDN Fallback
     if (!imageUrl) {
-      imageUrl = `${origin}/api/og/${id}`;
+      try {
+        const formData = new FormData();
+        formData.append('key', '6d704447cd4646f32ee71f7438b47836');
+        formData.append('action', 'upload');
+        formData.append('source', base64Image);
+        formData.append('format', 'json');
+
+        const freeRes = await fetch('https://freeimage.host/api/1/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (freeRes.ok) {
+          const freeData = await freeRes.json();
+          if (freeData?.image?.url) {
+            imageUrl = freeData.image.url;
+          }
+        }
+      } catch (e) {
+        console.warn('Freeimage upload error:', e);
+      }
     }
 
-    // Cache locally in memory
-    saveImage(id, buffer, 'image/png');
+    // Option 4: Edge OG Route Fallback
+    if (!imageUrl) {
+      imageUrl = `${origin}/api/og`;
+    }
 
-    // Build shareUrl with image parameter for OpenGraph crawlers
     const shareUrl = `${origin}/card/${id}?img=${encodeURIComponent(imageUrl)}`;
 
     return NextResponse.json({

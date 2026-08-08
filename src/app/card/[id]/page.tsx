@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 interface PageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
+    img?: string;
     name?: string;
     title?: string;
     role?: string;
@@ -14,7 +15,7 @@ interface PageProps {
 export async function generateMetadata({
   searchParams,
 }: PageProps): Promise<Metadata> {
-  const { name, title, role, shipping, age } = await searchParams;
+  const { img, name, shipping } = await searchParams;
 
   const host =
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
@@ -23,19 +24,13 @@ export async function generateMetadata({
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const baseUrl = `${protocol}://${host.replace(/^https?:\/\//, '')}`;
 
-  const qParams = new URLSearchParams();
-  if (name) qParams.set('name', name);
-  if (title) qParams.set('title', title);
-  if (role) qParams.set('role', role);
-  if (shipping) qParams.set('shipping', shipping);
-  if (age) qParams.set('age', age);
-
-  const ogImageUrl = `${baseUrl}/api/og?${qParams.toString()}`;
+  // Use persistent public CDN image URL if provided, otherwise edge OG route
+  const imageUrl = img ? decodeURIComponent(img) : `${baseUrl}/api/og`;
 
   const shareTitle = name ? `${name.toUpperCase()} @ HH Goa 2026` : 'HH Goa 2026 — Builder Pass';
   const description = shipping
     ? `${name || 'Builder'} is currently shipping "${shipping}" at Hacker House Goa 2026! 🚀 #FrameInGoa`
-    : 'Check out my Hacker House Goa 2026 builder pass! Create yours #FrameInGoa';
+    : 'Check out my Hacker House Goa 2026 graphic! Create yours #FrameInGoa';
 
   return {
     title: shareTitle,
@@ -47,7 +42,7 @@ export async function generateMetadata({
       siteName: 'HH Goa 2026',
       images: [
         {
-          url: ogImageUrl,
+          url: imageUrl,
           width: 1200,
           height: 630,
           alt: shareTitle,
@@ -58,22 +53,15 @@ export async function generateMetadata({
       card: 'summary_large_image',
       title: shareTitle,
       description,
-      images: [ogImageUrl],
+      images: [imageUrl],
     },
   };
 }
 
 export default async function SharePage({ searchParams }: PageProps) {
-  const { name, title, role, shipping, age } = await searchParams;
+  const { img } = await searchParams;
 
-  const qParams = new URLSearchParams();
-  if (name) qParams.set('name', name);
-  if (title) qParams.set('title', title);
-  if (role) qParams.set('role', role);
-  if (shipping) qParams.set('shipping', shipping);
-  if (age) qParams.set('age', age);
-
-  const displayImg = `/api/og?${qParams.toString()}`;
+  const displayImg = img ? decodeURIComponent(img) : '/api/og';
 
   return (
     <main
@@ -99,7 +87,7 @@ export default async function SharePage({ searchParams }: PageProps) {
           28–31 OCTOBER · GOA, INDIA
         </p>
 
-        {/* Display the exact customized graphic rendered by @vercel/og Edge */}
+        {/* Display the exact stored graphic */}
         <div
           className="rounded-2xl overflow-hidden shadow-2xl mb-8 mx-auto border-2"
           style={{
