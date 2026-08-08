@@ -5,7 +5,6 @@ import { nanoid } from 'nanoid';
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    // Determine public origin dynamically from request headers or Vercel env
     const host =
       request.headers.get('x-forwarded-host') ||
       request.headers.get('host') ||
@@ -20,9 +19,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     const buffer = Buffer.from(arrayBuffer);
     const id = nanoid(10);
 
-    let imageUrl = `${origin}/api/og/${id}`;
+    let imageUrl = '';
 
-    // Option 1: Vercel Blob Storage (if BLOB_READ_WRITE_TOKEN environment variable exists)
+    // 1. Try Vercel Blob if token environment variable is configured
     if (process.env.BLOB_READ_WRITE_TOKEN) {
       try {
         const blob = await put(`hh-goa-${id}.png`, buffer, {
@@ -33,34 +32,41 @@ export async function POST(request: Request): Promise<NextResponse> {
       } catch (e) {
         console.warn('Vercel Blob upload fallback:', e);
       }
-    } else {
-      // Option 2: Instant Public CDN Upload (tmpfiles.org) for zero-config public HTTPS image URLs
+    }
+
+    // 2. Try Catbox.moe free public CDN for permanent inline PNG image hosting
+    if (!imageUrl) {
       try {
         const formData = new FormData();
         const blobFile = new Blob([buffer], { type: 'image/png' });
-        formData.append('file', blobFile, `hh-goa-${id}.png`);
+        formData.append('reqtype', 'fileupload');
+        formData.append('fileToUpload', blobFile, `hh-goa-${id}.png`);
 
-        const tmpRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+        const catRes = await fetch('https://catbox.moe/user/api.php', {
           method: 'POST',
           body: formData,
         });
 
-        if (tmpRes.ok) {
-          const tmpData = await tmpRes.json();
-          if (tmpData?.data?.url) {
-            // Convert tmpfiles.org view URL to direct image download URL
-            imageUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+        if (catRes.ok) {
+          const catUrl = (await catRes.text()).trim();
+          if (catUrl.startsWith('http')) {
+            imageUrl = catUrl;
           }
         }
       } catch (e) {
-        console.warn('Public CDN upload error:', e);
+        console.warn('Catbox upload fallback:', e);
       }
     }
 
-    // Save in local in-memory store as fallback
+    // 3. Fallback to local image store route
+    if (!imageUrl) {
+      imageUrl = `${origin}/api/og/${id}`;
+    }
+
+    // Cache locally in memory
     saveImage(id, buffer, 'image/png');
 
-    // Build absolute share URL passing the public image URL as query param for Twitter crawler
+    // Build shareUrl with image parameter for OpenGraph crawlers
     const shareUrl = `${origin}/card/${id}?img=${encodeURIComponent(imageUrl)}`;
 
     return NextResponse.json({

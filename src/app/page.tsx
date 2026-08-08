@@ -177,7 +177,14 @@ export default function Home() {
                 >
                   {format === 'pfp' ? '02 · Save & Share' : '03 · Save & Share'}
                 </h2>
-                <ShareToX canvas={readyCanvas} format={format} name={name} />
+                <ShareToX
+                  canvas={readyCanvas}
+                  format={format}
+                  name={name}
+                  builderTitle={builderTitle}
+                  stackRole={stackRole}
+                  currentlyShipping={currentlyShipping}
+                />
               </section>
             )}
           </div>

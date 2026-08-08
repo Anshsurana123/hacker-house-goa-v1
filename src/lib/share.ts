@@ -1,13 +1,21 @@
 import { getCanvasBlob } from './canvasUtils';
 
+export interface ShareDetails {
+  name?: string;
+  builderTitle?: string;
+  stackRole?: string;
+  currentlyShipping?: string;
+}
+
 /**
- * Share the generated image to X (Twitter).
- * - Mobile Path: uses Web Share API Level 2 with attached PNG file.
- * - Desktop Path: background-uploads PNG, generates /card/[id] OG share link, and opens Twitter Intent with the URL attached so Twitter renders the image card preview!
+ * Share the generated graphic to X (Twitter).
+ * - Mobile Path: native Web Share API Level 2 with attached PNG file directly.
+ * - Desktop Path: background-uploads PNG, generates /card/[id] link with OG card preview, and opens Twitter Intent composer.
  */
 export async function shareToX(
   canvas: HTMLCanvasElement,
-  caption: string
+  caption: string,
+  details?: ShareDetails
 ): Promise<void> {
   const blob = await getCanvasBlob(canvas);
   const fullText = caption.includes('#FrameInGoa')
@@ -33,7 +41,7 @@ export async function shareToX(
       } catch (err: unknown) {
         const error = err as Error;
         if (error.name === 'AbortError') return; // User cancelled
-        console.warn('Mobile Web Share failed, opening Twitter intent...', error);
+        console.warn('Mobile Web Share fallback:', error);
       }
     }
   }
@@ -42,12 +50,24 @@ export async function shareToX(
   try {
     const uploadResult = await uploadForShare(blob);
     if (uploadResult && uploadResult.shareUrl) {
-      const intentUrl = buildTwitterIntentUrl(fullText, uploadResult.shareUrl);
+      let finalShareUrl = uploadResult.shareUrl;
+
+      // Append builder details for dynamic @vercel/og Edge fallback rendering
+      if (details) {
+        const urlObj = new URL(finalShareUrl);
+        if (details.name) urlObj.searchParams.set('name', details.name);
+        if (details.builderTitle) urlObj.searchParams.set('title', details.builderTitle);
+        if (details.stackRole) urlObj.searchParams.set('role', details.stackRole);
+        if (details.currentlyShipping) urlObj.searchParams.set('shipping', details.currentlyShipping);
+        finalShareUrl = urlObj.toString();
+      }
+
+      const intentUrl = buildTwitterIntentUrl(fullText, finalShareUrl);
       window.open(intentUrl, '_blank', 'noopener,noreferrer');
       return;
     }
   } catch (err) {
-    console.warn('Upload for share failed, falling back to simple intent:', err);
+    console.warn('Upload for share failed, falling back to direct intent:', err);
   }
 
   // Fallback: Open Twitter Intent with pre-filled text

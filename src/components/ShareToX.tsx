@@ -1,5 +1,6 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { downloadCanvas } from '@/lib/canvasUtils';
 import { shareToX } from '@/lib/share';
 
@@ -7,79 +8,104 @@ interface ShareToXProps {
   canvas: HTMLCanvasElement | null;
   format: 'pfp' | 'card';
   name?: string;
+  builderTitle?: string;
+  stackRole?: string;
+  currentlyShipping?: string;
 }
 
-export default function ShareToX({ canvas, format, name }: ShareToXProps) {
+export default function ShareToX({
+  canvas,
+  format,
+  name,
+  builderTitle,
+  stackRole,
+  currentlyShipping,
+}: ShareToXProps) {
   const [isSharing, setIsSharing] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
-
-  useEffect(() => {
-    // Basic iOS detection
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    setIsIOS(/iphone|ipad|ipod/.test(userAgent));
-  }, []);
 
   const handleDownload = () => {
     if (!canvas) return;
-    downloadCanvas(canvas, `hh-goa-2026-${format}.png`);
+    const filename =
+      format === 'pfp'
+        ? 'hh-goa-2026-pfp-frame.png'
+        : `hh-goa-2026-builder-card-${(name || 'builder').toLowerCase().replace(/\s+/g, '-')}.png`;
+
+    downloadCanvas(canvas, filename);
   };
 
   const handleShare = async () => {
     if (!canvas) return;
     setIsSharing(true);
+
     try {
-      const defaultCaption = format === 'pfp' 
-        ? "Just got my HH Goa 2026 frame! 🌴 See you in Goa! #FrameInGoa #HHGoa2026"
-        : `I'm ${name || 'ready'}, geared up for HH Goa 2026! 🏖️🚀 #FrameInGoa #HHGoa2026`;
-      
-      await shareToX(canvas, defaultCaption);
+      const caption =
+        format === 'pfp'
+          ? 'Just got my HH Goa 2026 profile frame! 🌴 See you in Goa! #FrameInGoa #HHGoa2026'
+          : `I'm ${name ? name.toUpperCase() : 'a builder'}, geared up for HH Goa 2026! 🏖️🚀 #FrameInGoa #HHGoa2026`;
+
+      await shareToX(canvas, caption, {
+        name,
+        builderTitle,
+        stackRole,
+        currentlyShipping,
+      });
     } catch (err) {
-      console.error("Failed to share:", err);
+      console.error('Share error:', err);
     } finally {
       setIsSharing(false);
     }
   };
 
+  const isDisabled = !canvas;
+
   return (
-    <div className="w-full flex flex-col items-center gap-2">
-      <div className="flex flex-col sm:flex-row gap-4 w-full">
+    <div className="flex flex-col gap-3 font-['Space_Mono'] w-full">
+      <div className="flex flex-col sm:flex-row gap-3 w-full">
+        {/* Download Button */}
         <button
           onClick={handleDownload}
-          disabled={!canvas}
-          className={`flex-1 min-h-[56px] flex items-center justify-center gap-2 rounded-lg font-['Alfa_Slab_One'] text-lg transition-all active:scale-95
-            ${canvas 
-              ? 'bg-[#E3A730] text-[#173C2E] hover:bg-[#E3A730]/90 animate-pulse hover:animate-none' 
-              : 'bg-[#E3A730]/30 text-[#173C2E]/50 cursor-not-allowed'
+          disabled={isDisabled}
+          className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm min-h-[48px]
+            ${
+              isDisabled
+                ? 'bg-[#173C2E]/50 text-[#F3E9D2]/30 border border-[#F3E9D2]/10 cursor-not-allowed'
+                : 'bg-[#E3A730] text-[#173C2E] hover:bg-[#f0b43e] hover:shadow-[0_0_15px_rgba(227,167,48,0.4)] border border-[#E3A730]'
             }
           `}
         >
-          <span>⬇</span> Download PNG
+          <span className="text-base">⬇</span>
+          <span>Download PNG</span>
         </button>
 
+        {/* Share to X Button */}
         <button
           onClick={handleShare}
-          disabled={!canvas || isSharing}
-          className={`flex-1 min-h-[56px] flex items-center justify-center gap-2 rounded-lg font-['Alfa_Slab_One'] text-lg transition-all active:scale-95
-            ${canvas && !isSharing
-              ? 'bg-[#E8237E] text-[#F3E9D2] hover:bg-[#E8237E]/90' 
-              : 'bg-[#E8237E]/30 text-[#F3E9D2]/50 cursor-not-allowed'
+          disabled={isDisabled || isSharing}
+          className={`flex-1 flex items-center justify-center gap-2 py-3.5 px-6 rounded-xl font-bold transition-all shadow-md active:scale-95 text-sm min-h-[48px]
+            ${
+              isDisabled || isSharing
+                ? 'bg-[#173C2E]/50 text-[#F3E9D2]/30 border border-[#F3E9D2]/10 cursor-not-allowed'
+                : 'bg-[#E8237E] text-white hover:bg-[#f4338c] hover:shadow-[0_0_15px_rgba(232,35,126,0.4)] border border-[#E8237E]'
             }
           `}
         >
           {isSharing ? (
-            <div className="w-5 h-5 border-2 border-[#F3E9D2] border-t-transparent rounded-full animate-spin"></div>
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Preparing Link...</span>
+            </>
           ) : (
-            <span>𝕏</span>
+            <>
+              <span className="text-base">𝕏</span>
+              <span>Share to 𝕏</span>
+            </>
           )}
-          Share to 𝕏
         </button>
       </div>
-      
-      {isIOS && canvas && (
-        <p className="text-[#F3E9D2]/70 text-xs font-['Space_Mono'] mt-2 text-center">
-          Tip: Long-press the preview image to save on iOS
-        </p>
-      )}
+
+      <p className="text-[10px] text-[#F3E9D2]/40 text-center">
+        💡 Mobile: Shares PNG directly to X app. Desktop: Opens X composer with card preview link.
+      </p>
     </div>
   );
 }

@@ -24,7 +24,18 @@ export const viewport: Viewport = {
   themeColor: "#173C2E",
 };
 
+// Configure metadataBase so Next.js App Router automatically constructs valid absolute URLs for OpenGraph/Twitter
+const productionHost =
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+  process.env.VERCEL_URL ||
+  "hacker-house-goa-v1.vercel.app";
+
+const siteBaseUrl = productionHost.startsWith("http")
+  ? productionHost
+  : `https://${productionHost.replace(/^https?:\/\//, "")}`;
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteBaseUrl),
   title: "HH Goa 2026 — Frame & ID Card Generator",
   description:
     "Create your branded Hacker House Goa 2026 profile picture frame or builder ID card. Upload, generate, and share in seconds.",
@@ -59,11 +70,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${spaceMono.variable} ${alfaSlabOne.variable}`}>
       <head>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>" />
+        <link
+          rel="icon"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌴</text></svg>"
+        />
       </head>
-      <body className="antialiased">
-        {children}
-      </body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
