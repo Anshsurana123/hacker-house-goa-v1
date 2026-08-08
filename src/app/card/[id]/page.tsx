@@ -2,12 +2,26 @@ import type { Metadata } from 'next';
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ img?: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const imageUrl = `${baseUrl}/api/og/${id}`;
+  const { img } = await searchParams;
+
+  const host =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL ||
+    'hacker-house-goa-v1.vercel.app';
+  const protocol = host.includes('localhost') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host.replace(/^https?:\/\//, '')}`;
+
+  // Absolute public HTTPS URL for Twitter crawler
+  const imageUrl = img ? decodeURIComponent(img) : `${baseUrl}/api/og/${id}`;
+
   const title = 'HH Goa 2026 — Graphic';
   const description =
     'Check out my Hacker House Goa 2026 graphic! Create yours at HH Goa 2026 #FrameInGoa';
@@ -38,8 +52,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function SharePage({ params }: PageProps) {
+export default async function SharePage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const { img } = await searchParams;
+
+  const displayImg = img ? decodeURIComponent(img) : `/api/og/${id}`;
 
   return (
     <main
@@ -74,7 +91,7 @@ export default async function SharePage({ params }: PageProps) {
           }}
         >
           <img
-            src={`/api/og/${id}`}
+            src={displayImg}
             alt="HH Goa 2026 Graphic"
             className="w-full h-auto block"
           />
